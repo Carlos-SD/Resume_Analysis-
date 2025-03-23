@@ -1,54 +1,81 @@
 import tkinter as tk
 from tkinter import filedialog
-from src.models.resume_parser import process_resume
+from src.models.resume_parser import read_resume, extract_resume_info
+from data import sample_resumes
+import os
+import random
+import sys
 
 class Main:
     def __init__(self):
-        # Esta es la clase principal que coordina todo el flujo
         self.file_path = None
-        self.role = "Web Developer"  # O el rol que quieras establecer
+        self.role = None 
 
     def upload_resume(self):
-        """Abre una ventana para seleccionar el archivo."""
         root = tk.Tk()
-        root.withdraw()  # Ocultar la ventana principal de Tkinter
+        root.withdraw()  
         self.file_path = filedialog.askopenfilename(
             title="Select Resume File",
             filetypes=[
                 ("Text Files", "*.txt"),
                 ("Word Documents", "*.docx"),
-                ("PDF Files", "*.pdf"),
-                ("All Files", "*.*")
+                ("PDF Files", "*.pdf")
             ]
         )
-
-        # Verificar si el archivo fue seleccionado
         if not self.file_path:
             print("No file selected.")
             return None
-
-        root.quit()  # Cerrar la ventana de Tkinter después de la selección
+        root.quit()  
         return self.file_path
 
     def process_resume(self):
-        """Procesar el archivo de currículo una vez que sea seleccionado."""
         if self.file_path:
-            print(f"Processing resume: {self.file_path}")
-            process_resume(self.file_path, self.role)  # Llama a la función para procesar el archivo
+            print(f"\nProcessing resume: {self.file_path}\n")
+            resume_text = read_resume(self.file_path)
+            info = extract_resume_info(resume_text, self.role)
+            print("Extracted Information:")
+            for key, value in info.items():
+                print(f"{key.capitalize()}: {value}")
         else:
             print("No file to process.")
 
     def run(self):
-        """Ejecuta el flujo principal."""
-        print("Please select a resume file...")
-        self.upload_resume()
+        while True:
+            print("\nWelcome to the Resume Parser App!\n")
+            print("Please select an option:")
+            print("1. Use a default resume file")
+            print("2. Upload a resume file")
+            print("3. Exit")
+            option = input("Please select an option: ").strip()
 
-        if self.file_path:
-            print(f"Processing the resume from {self.file_path}...\n")
-            self.process_resume()
-        else:
-            print("No valid file was selected to process.")
+            match option:
+                case "1":
+                    default_folder = "data/sample_resumes"
+                    if not os.path.isdir(default_folder):
+                        print("Default resumes folder not found.")
+                        continue
+                    archives = os.listdir(default_folder)
+                    if not archives:
+                        print("No default resumes found in the folder.")
+                        continue
+                    selected_archive = random.choice(archives)
+                    self.file_path = os.path.join(default_folder, selected_archive)
+                    self.process_resume()
+                case "2":
+                    self.role = input("Please enter the role (e.g., Web Developer, Data Scientist, etc.): ").strip()
+                    print("\nPlease select a resume file...")
+                    self.upload_resume()
+                    if self.file_path:
+                        self.process_resume()
+                    else:
+                        print("No valid file was selected to process.")
+                case "3":
+                    print("Exiting the Resume Parser App.")
+                    sys.exit(0)
+                case _:
+                    print("Invalid option, please try again.")
+    
 
 if __name__ == "__main__":
-    main_app = Main()  # Crear una instancia de la clase Main
-    main_app.run()  # Ejecutar el flujo
+    main_app = Main()
+    main_app.run()

@@ -1,16 +1,13 @@
-contact_info_regex = {
-    "name": r"(Name:\s*([A-Za-z\s]+))",
-    "email": r"(Email:\s*([\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}))",
-    "phone": r"(Phone:\s*(\+?\d{1,2}\s?\(?\d+\)?[\s.-]?\d+[\s.-]?\d+))",
-    "role": r"(Role:\s*([A-Za-z\s]+))"
-}
-
-education_regex = r"(Education:\s*(.*\n.*))"
-work_experience_regex = r"(Work Experience:\s*(.*\n.*))"
+email_regex = r"[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}"
+phone_regex = r"(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})"
+name_regex = r"([A-Za-z\s]+)"
+role_regex = r"([A-Za-z\s]+)"
+education_regex = r"EDUCATION\s*\n(.*?)(?=\n[A-Z\s]+(?:\n|$))"
+work_experience_regex = r"WORK EXPERIENCE\s*\n(.*?)(?=\n[A-Z\s]+(?:\n|$))"
 skills_regex = {
-    "Data Scientist": r"(Skills:\s*(Python|R|Machine Learning|Deep Learning|Data Science))",
-    "AI Engineer": r"(Skills:\s*(TensorFlow|Keras|PyTorch|AI|Neural Networks))",
-    "Software Engineer": r"(Skills:\s*(Java|C++|Python|Git|Software Development))",
-    "Web Developer": r"(Skills:\s*(HTML|CSS|JavaScript|React|Node.js|Angular))",
-    "DevOps Engineer": r"(Skills:\s*(Docker|Kubernetes|CI/CD|AWS|Terraform|Ansible))"
+    "Data Scientist": r"SKILLS\s*:?\s*\n(.*?)(?=\n[A-Z][A-Z\s]+(?:\n|$)|$)",
+    "AI Engineer": r"SKILLS\s*:?\s*\n(.*?)(?=\n[A-Z][A-Z\s]+(?:\n|$)|$)",
+    "Software Engineer": r"SKILLS\s*:?\s*\n(.*?)(?=\n[A-Z][A-Z\s]+(?:\n|$)|$)",
+    "Web Developer": r"SKILLS\s*:?\s*\n(.*?)(?=\n[A-Z][A-Z\s]+(?:\n|$)|$)",
+    "DevOps Engineer": r"SKILLS\s*:?\s*\n(.*?)(?=\n[A-Z][A-Z\s]+(?:\n|$)|$)"
 }
