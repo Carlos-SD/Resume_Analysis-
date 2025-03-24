@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
-from src.models.resume_parser import read_resume, extract_resume_info
+from src.models.resume_classifier import ResumeClassifier
+from src.config import regex_config
 from data import sample_resumes
 import os
 import random
@@ -8,12 +9,14 @@ import sys
 
 class Main:
     def __init__(self):
+        # Se define un rol por defecto aleatorio, pero en la opción 2 se permitirá que el usuario lo ingrese manualmente.
         self.file_path = None
-        self.role = None 
+        default_roles = ["Data Scientist", "AI Engineer", "Software Engineer", "Web Developer", "DevOps Engineer"]
+        self.role = random.choice(default_roles)
 
     def upload_resume(self):
         root = tk.Tk()
-        root.withdraw()  
+        root.withdraw()
         self.file_path = filedialog.askopenfilename(
             title="Select Resume File",
             filetypes=[
@@ -25,17 +28,15 @@ class Main:
         if not self.file_path:
             print("No file selected.")
             return None
-        root.quit()  
+        root.quit()
         return self.file_path
 
     def process_resume(self):
+        resume_classifier = ResumeClassifier()
         if self.file_path:
             print(f"\nProcessing resume: {self.file_path}\n")
-            resume_text = read_resume(self.file_path)
-            info = extract_resume_info(resume_text, self.role)
-            print("Extracted Information:")
-            for key, value in info.items():
-                print(f"{key.capitalize()}: {value}")
+            classification = resume_classifier.classify_resume(self.file_path, self.role)
+            print("Classification:", classification)
         else:
             print("No file to process.")
 
@@ -62,7 +63,15 @@ class Main:
                     self.file_path = os.path.join(default_folder, selected_archive)
                     self.process_resume()
                 case "2":
-                    self.role = input("Please enter the role (e.g., Web Developer, Data Scientist, etc.): ").strip()
+                    valid_roles = list(regex_config.skills_regex.keys())
+                    while True:
+                        role_input = input("Please enter the role (e.g., Web Developer, Data Scientist, etc.): ").strip()
+                        if role_input in valid_roles:
+                            self.role = role_input
+                            break
+                        else:
+                            print(f"Invalid role. Valid options are: {', '.join(valid_roles)}")
+                            
                     print("\nPlease select a resume file...")
                     self.upload_resume()
                     if self.file_path:
@@ -74,7 +83,6 @@ class Main:
                     sys.exit(0)
                 case _:
                     print("Invalid option, please try again.")
-    
 
 if __name__ == "__main__":
     main_app = Main()
