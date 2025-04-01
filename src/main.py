@@ -1,11 +1,16 @@
 import tkinter as tk
 from tkinter import filedialog
+import os
+import sys
+import random
+
+# Añadir el directorio raíz al path para que se puedan encontrar los módulos
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.models.resume_classifier import ResumeClassifier
+from src.models.resume_ranker import ResumeRanker
 from src.config import regex_config
 from data import sample_resumes
-import os
-import random
-import sys
 
 class Main:
     def __init__(self):
@@ -33,10 +38,41 @@ class Main:
 
     def process_resume(self):
         resume_classifier = ResumeClassifier()
+        resume_ranker = ResumeRanker()
+        
         if self.file_path:
             print(f"\nProcessing resume: {self.file_path}\n")
+            
+            # Extraer información del CV
+            parser = resume_classifier.resume
+            resume_text = parser.read_resume(self.file_path)
+            resume_info = parser.extract_resume_info(resume_text, self.role)
+            
+            # Clasificar usando autómata (método original)
             classification = resume_classifier.classify_resume(self.file_path, self.role)
-            print("Classification:", classification)
+            print("Classification (using DFA):", classification)
+            
+            # Ranking usando transductor (FST - nuevo método)
+            ranking_result = resume_ranker.rank_resume(resume_info, self.role)
+            
+            print("\n--- CV Ranking using FST ---")
+            print(f"Score: {ranking_result['score']} - Ranking: {ranking_result['ranking']}")
+            print("\nComponent Scores:")
+            
+            # Mostrar puntuaciones detalladas por componente
+            for component, details in ranking_result['details'].items():
+                print(f"  - {component.capitalize()}: {details['score']} (weighted: {details['weighted_score']})")
+            
+            print("\nRecommendation:")
+            if ranking_result['ranking'] == "Highly Qualified":
+                print("- Este candidato es altamente cualificado para el puesto. Se recomienda proceder a entrevista.")
+            elif ranking_result['ranking'] == "Qualified":
+                print("- Este candidato está cualificado para el puesto. Se recomienda revisar puntos específicos durante la entrevista.")
+            elif ranking_result['ranking'] == "Potentially Qualified":
+                print("- Este candidato podría ser adecuado. Se recomienda una revisión adicional.")
+            else:
+                print("- Este candidato no parece cumplir con los requisitos mínimos para el puesto.")
+                
         else:
             print("No file to process.")
 
