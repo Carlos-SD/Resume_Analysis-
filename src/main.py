@@ -3,12 +3,14 @@ from tkinter import filedialog
 import os
 import sys
 import random
+from datetime import datetime
 
 # Añadir el directorio raíz al path para que se puedan encontrar los módulos
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.models.resume_classifier import ResumeClassifier
 from src.models.resume_ranker import ResumeRanker
+from src.models.resume_grammar import ResumeGrammarValidator
 from src.config import regex_config
 from data import sample_resumes
 
@@ -18,6 +20,7 @@ class Main:
         self.file_path = None
         default_roles = ["Data Scientist", "AI Engineer", "Software Engineer", "Web Developer", "DevOps Engineer"]
         self.role = random.choice(default_roles)
+        self.grammar_validator = ResumeGrammarValidator()
 
     def upload_resume(self):
         root = tk.Tk()
@@ -35,6 +38,42 @@ class Main:
             return None
         root.quit()
         return self.file_path
+
+    def generate_summary_text(self, resume_info):
+        """Genera el texto del resumen en el formato requerido por la gramática"""
+        return f"""
+Personal Information:
+{resume_info.get('name', 'Unknown')}
+{resume_info.get('email', 'unknown@email.com')}
+{resume_info.get('phone', 'Unknown')}
+{resume_info.get('location', 'Unknown')}
+{resume_info.get('linkedin', 'https://linkedin.com/in/unknown')}
+{resume_info.get('portfolio', 'https://portfolio.com/unknown')}
+
+Summary:
+{resume_info.get('summary', 'No summary available.')}
+"""
+
+    def save_summary(self, html_content, markdown_content, resume_name):
+        """Guarda los resúmenes generados en archivos"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        base_name = os.path.splitext(os.path.basename(resume_name))[0]
+        
+        # Crear directorio para resúmenes si no existe
+        output_dir = "output/summaries"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Guardar HTML
+        html_path = os.path.join(output_dir, f"{base_name}_{timestamp}.html")
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+            
+        # Guardar Markdown
+        md_path = os.path.join(output_dir, f"{base_name}_{timestamp}.md")
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
+            
+        return html_path, md_path
 
     def process_resume(self):
         resume_classifier = ResumeClassifier()
@@ -72,6 +111,25 @@ class Main:
                 print("- Este candidato podría ser adecuado. Se recomienda una revisión adicional.")
             else:
                 print("- Este candidato no parece cumplir con los requisitos mínimos para el puesto.")
+                
+            # Procesar y generar resumen usando gramática
+            try:
+                summary_text = self.generate_summary_text(resume_info)
+                model = self.grammar_validator.parse_and_validate(summary_text)
+                
+                # Generar visualizaciones
+                html_content = self.grammar_validator.generate_html(model)
+                markdown_content = self.grammar_validator.generate_markdown(model)
+                
+                # Guardar resúmenes
+                html_path, md_path = self.save_summary(html_content, markdown_content, self.file_path)
+                
+                print("\n--- Resume Summary Generated ---")
+                print(f"HTML summary saved to: {html_path}")
+                print(f"Markdown summary saved to: {md_path}")
+                
+            except Exception as e:
+                print(f"\nError generating summary: {str(e)}")
                 
         else:
             print("No file to process.")
