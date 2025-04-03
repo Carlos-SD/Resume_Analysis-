@@ -5,7 +5,6 @@ import sys
 import random
 from datetime import datetime
 
-# Añadir el directorio raíz al path para que se puedan encontrar los módulos
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.models.resume_classifier import ResumeClassifier
@@ -16,7 +15,6 @@ from data import sample_resumes
 
 class Main:
     def __init__(self):
-        # Se define un rol por defecto aleatorio, pero en la opción 2 se permitirá que el usuario lo ingrese manualmente.
         self.file_path = None
         default_roles = ["Data Scientist", "AI Engineer", "Software Engineer", "Web Developer", "DevOps Engineer"]
         self.role = random.choice(default_roles)
@@ -59,16 +57,13 @@ Summary:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         base_name = os.path.splitext(os.path.basename(resume_name))[0]
         
-        # Crear directorio para resúmenes si no existe
         output_dir = "output/summaries"
         os.makedirs(output_dir, exist_ok=True)
         
-        # Guardar HTML
         html_path = os.path.join(output_dir, f"{base_name}_{timestamp}.html")
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
             
-        # Guardar Markdown
         md_path = os.path.join(output_dir, f"{base_name}_{timestamp}.md")
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
@@ -82,23 +77,19 @@ Summary:
         if self.file_path:
             print(f"\nProcessing resume: {self.file_path}\n")
             
-            # Extraer información del CV
             parser = resume_classifier.resume
             resume_text = parser.read_resume(self.file_path)
             resume_info = parser.extract_resume_info(resume_text, self.role)
             
-            # Clasificar usando autómata (método original)
             classification = resume_classifier.classify_resume(self.file_path, self.role)
             print("Classification (using DFA):", classification)
             
-            # Ranking usando transductor (FST - nuevo método)
             ranking_result = resume_ranker.rank_resume(resume_info, self.role)
             
             print("\n--- CV Ranking using FST ---")
             print(f"Score: {ranking_result['score']} - Ranking: {ranking_result['ranking']}")
             print("\nComponent Scores:")
             
-            # Mostrar puntuaciones detalladas por componente
             for component, details in ranking_result['details'].items():
                 print(f"  - {component.capitalize()}: {details['score']} (weighted: {details['weighted_score']})")
             
@@ -112,7 +103,6 @@ Summary:
             else:
                 print("- Este candidato no parece cumplir con los requisitos mínimos para el puesto.")
                 
-            # Procesar y generar resumen usando gramática
             try:
                 summary_text = self.generate_summary_text(resume_info)
                 model = self.grammar_validator.parse_and_validate(summary_text)

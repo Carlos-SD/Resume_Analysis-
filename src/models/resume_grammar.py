@@ -1,7 +1,6 @@
 from textx import metamodel_from_str, TextXSemanticError
 import re
 
-# Definición de la gramática para el resumen del CV
 resume_grammar = """
 ResumeSummary:
     personal_info=PersonalInfo
@@ -53,17 +52,13 @@ class ResumeGrammarValidator:
             
     def validate(self, model):
         """Valida el modelo completo"""
-        # Validar email
         self.validate_email(model.personal_info.email)
         
-        # Validar teléfono
         self.validate_phone(model.personal_info.phone)
         
-        # Validar URLs
         self.validate_url(model.personal_info.linkedin)
         self.validate_url(model.personal_info.portfolio)
         
-        # Validar resumen
         self.validate_summary(model.summary.content)
         
     def generate_html(self, model):

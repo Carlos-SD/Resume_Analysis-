@@ -4,15 +4,13 @@ import re
 
 class ResumeRanker:
     def __init__(self):
-        # Definición de pesos para diferentes componentes del CV
         self.component_weights = {
-            "education": 0.2,  # 20% de la puntuación
-            "work_experience": 0.3,  # 30% de la puntuación
-            "projects": 0.15,  # 15% de la puntuación
-            "skills": 0.35,    # 35% de la puntuación
+            "education": 0.2,
+            "work_experience": 0.3,
+            "projects": 0.15,
+            "skills": 0.35, 
         }
         
-        # Definición de las habilidades relevantes por rol y sus pesos (keywords)
         self.skills_by_role = {
             "Data Scientist": {
                 "python": 0.15, "r": 0.1, "machine learning": 0.2, "deep learning": 0.15,
@@ -36,7 +34,6 @@ class ResumeRanker:
             }
         }
         
-        # Palabras clave para experiencia laboral por rol
         self.experience_keywords = {
             "Data Scientist": ["data analysis", "machine learning", "modeling", "statistics", "research"],
             "AI Engineer": ["machine learning", "deep learning", "neural networks", "model deployment", "research"],
@@ -45,7 +42,6 @@ class ResumeRanker:
             "DevOps Engineer": ["infrastructure", "deployment", "pipeline", "monitoring", "automation"]
         }
         
-        # FST para evaluar experiencia (simplificado como un DFA con salidas)
         self.experience_fst_states = {
             'start': {'junior': ('mid', 0.5), 'intern': ('entry', 0.3), 'senior': ('senior', 1.0), '': ('entry', 0.3)},
             'entry': {'year': ('entry_years', 0.0)},
@@ -54,16 +50,14 @@ class ResumeRanker:
             'mid_years': {'1': ('complete', 0.6), '2': ('complete', 0.7), '3+': ('complete', 0.8)},
             'senior': {'year': ('senior_years', 0.0)},
             'senior_years': {'1': ('complete', 0.8), '2': ('complete', 0.9), '3+': ('complete', 1.0)},
-            'complete': {}  # Estado final
+            'complete': {}
         }
         
     def extract_experience_level(self, experience_text):
         """Extrae el nivel de experiencia usando FST simplificado"""
-        # Determina nivel básico basado en palabras clave
         level = ''
-        years = '1'  # Por defecto
+        years = '1'
         
-        # Detecta nivel
         if re.search(r'\b(senior|lead|principal)\b', experience_text, re.IGNORECASE):
             level = 'senior'
         elif re.search(r'\b(mid|intermediate)\b', experience_text, re.IGNORECASE):
@@ -73,7 +67,6 @@ class ResumeRanker:
         elif re.search(r'\b(intern|internship)\b', experience_text, re.IGNORECASE):
             level = 'intern'
             
-        # Detecta años
         year_match = re.search(r'(\d+)[\+]?\s*(year|yr)', experience_text, re.IGNORECASE)
         if year_match:
             year_num = int(year_match.group(1))
@@ -82,11 +75,9 @@ class ResumeRanker:
             else:
                 years = str(year_num)
             
-        # Procesa a través del FST
         state = 'start'
         score = 0.0
         
-        # Primera transición - nivel
         if level in self.experience_fst_states[state]:
             state, level_score = self.experience_fst_states[state][level]
             score = level_score
@@ -94,14 +85,12 @@ class ResumeRanker:
             state, level_score = self.experience_fst_states[state]['']
             score = level_score
             
-        # Segunda transición - years
         if state in ['entry', 'mid', 'senior']:
             state, _ = self.experience_fst_states[state]['year']
             
-            # Tercera transición - número de años
             if years in self.experience_fst_states[state]:
                 state, years_score = self.experience_fst_states[state][years]
-                score = max(score, years_score)  # Tomamos el mayor score
+                score = max(score, years_score)
             else:
                 state, years_score = self.experience_fst_states[state]['1']
                 score = max(score, years_score)
@@ -117,15 +106,12 @@ class ResumeRanker:
         max_possible_score = 0.0
         skills_text = skills_text.lower()
         
-        # Suma todos los pesos posibles para normalizar
         for keyword, weight in self.skills_by_role[role].items():
             max_possible_score += weight
             
-            # Busca la habilidad en el texto
             if re.search(r'\b' + re.escape(keyword) + r'\b', skills_text, re.IGNORECASE):
                 score += weight
                 
-        # Normaliza la puntuación
         if max_possible_score > 0:
             return score / max_possible_score
         return 0.0
@@ -142,7 +128,6 @@ class ResumeRanker:
             if re.search(r'\b' + re.escape(keyword) + r'\b', experience_text, re.IGNORECASE):
                 relevance_score += 1.0 / len(keywords)
                 
-        # Combina relevancia con nivel de experiencia
         experience_level_score = self.extract_experience_level(experience_text)
         combined_score = 0.6 * relevance_score + 0.4 * experience_level_score
         
@@ -150,9 +135,8 @@ class ResumeRanker:
         
     def calculate_education_score(self, education_text):
         """Calcula puntuación de educación"""
-        score = 0.5  # Puntuación base
+        score = 0.5
         
-        # Detecta nivel educativo
         if re.search(r'\b(phd|doctor|doctorate)\b', education_text, re.IGNORECASE):
             score = 1.0
         elif re.search(r'\b(master|msc|ms|ma|mba)\b', education_text, re.IGNORECASE):
@@ -162,18 +146,16 @@ class ResumeRanker:
         elif re.search(r'\b(associate|diploma)\b', education_text, re.IGNORECASE):
             score = 0.6
         
-        # Bonus por universidad prestigiosa (podría expandirse)
         if re.search(r'\b(harvard|mit|stanford|berkeley|cambridge|oxford)\b', education_text, re.IGNORECASE):
             score += 0.1
             
-        return min(score, 1.0)  # Máximo 1.0
+        return min(score, 1.0)
         
     def calculate_projects_score(self, projects_text, role):
         """Calcula puntuación de proyectos basada en relevancia para el rol"""
         if not projects_text or projects_text == "None\n":
             return 0.0
             
-        # Utiliza las mismas keywords que para experiencia
         if role in self.experience_keywords:
             keywords = self.experience_keywords[role]
             score = 0.0
@@ -183,26 +165,23 @@ class ResumeRanker:
                     score += 1.0 / len(keywords)
                     
             return score
-        return 0.5  # Score por defecto
+        return 0.5
         
     def rank_resume(self, resume_info, role):
         """Función principal para puntuar un CV usando FST"""
         if not resume_info or not role:
             return {"score": 0.0, "ranking": "Not Qualified", "details": {}}
             
-        # Obtiene los componentes del CV
         education = resume_info.get('education', "None\n")
         work_experience = resume_info.get('work_experience', "None\n")
         projects = resume_info.get('projects', "None\n")
         skills = resume_info.get('skills', "None\n")
         
-        # Calcula puntuaciones por componente
         education_score = self.calculate_education_score(education)
         experience_score = self.calculate_experience_relevance(work_experience, role)
         projects_score = self.calculate_projects_score(projects, role)
         skills_score = self.calculate_skill_score(skills, role)
         
-        # Calcula puntuación ponderada total
         total_score = (
             self.component_weights["education"] * education_score +
             self.component_weights["work_experience"] * experience_score +
@@ -210,7 +189,6 @@ class ResumeRanker:
             self.component_weights["skills"] * skills_score
         )
         
-        # Determina ranking basado en la puntuación
         ranking = "Not Qualified"
         if total_score >= 0.8:
             ranking = "Highly Qualified"
@@ -219,7 +197,6 @@ class ResumeRanker:
         elif total_score >= 0.4:
             ranking = "Potentially Qualified"
             
-        # Detalles para explicabilidad
         details = {
             "education": {
                 "score": round(education_score, 2),
