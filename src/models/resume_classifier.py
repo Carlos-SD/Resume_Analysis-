@@ -53,16 +53,25 @@ class ResumeClassifier:
 
     def transform_info_to_tokens(self, info):
          tokens = []
-         tokens.append("name" if info.get("name") != "None\n" else "missing_name")
-         tokens.append("email" if info.get("email") != "None\n" else "missing_email")
-         tokens.append("phone" if info.get("phone") != "None\n" else "missing_phone")
-         tokens.append("education" if info.get("education") != "None\n" else "missing_education")
-         tokens.append("work_experience" if info.get("work_experience") != "None\n" else "missing_work_experience")
-         if info.get("projects") != "None\n" or info.get("activities") != "None\n":
+         # Verificar que los campos existan y no sean valores por defecto
+         tokens.append("name" if info.get("name") and info.get("name") != "John Doe" else "missing_name")
+         tokens.append("email" if info.get("email") and info.get("email") != "example@email.com" else "missing_email")
+         tokens.append("phone" if info.get("phone") and info.get("phone") != "+1-234-567-8901" else "missing_phone")
+         tokens.append("education" if info.get("education") and info.get("education") != "Bachelor's Degree in Computer Science" else "missing_education")
+         tokens.append("work_experience" if info.get("work_experience") and info.get("work_experience") != "Software Engineer with 2+ years of experience" else "missing_work_experience")
+         
+         # Verificar si hay proyectos o actividades
+         has_projects = info.get("projects") and info.get("projects") != "Various projects developing software applications"
+         has_activities = info.get("activities") and info.get("activities") != "Participation in professional development activities"
+         if has_projects or has_activities:
              tokens.append("projects_activities")
          else:
              tokens.append("missing_projects_activities")
-         tokens.append("skills" if info.get("skills") != "None\n" else "missing_skills")
+             
+         # Verificar si hay habilidades relevantes
+         default_skills = f"Skills relevant to"
+         tokens.append("skills" if info.get("skills") and default_skills not in info.get("skills") else "missing_skills")
+         
          return tokens
 
     def classify_resume(self, file_path, role):
