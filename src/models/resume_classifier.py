@@ -24,25 +24,25 @@ class ResumeClassifier:
         )
 
         self.dfa.add_transition('q0', "name", 'q1')
-        self.dfa.add_transition('q0', "missing_name", 'q8')  # REJECTED
+        self.dfa.add_transition('q0', "missing_name", 'q8')  
         
         self.dfa.add_transition('q1', "email", 'q2')
-        self.dfa.add_transition('q1', "missing_email", 'q9')  # NEEDS REVIEW
+        self.dfa.add_transition('q1', "missing_email", 'q9')  
         
         self.dfa.add_transition('q2', "phone", 'q3')
-        self.dfa.add_transition('q2', "missing_phone", 'q9') # NEEDS REVIEW
+        self.dfa.add_transition('q2', "missing_phone", 'q9') 
         
         self.dfa.add_transition('q3', "education", 'q4')
-        self.dfa.add_transition('q3', "missing_education", 'q9') # NEEDS REVIEW
+        self.dfa.add_transition('q3', "missing_education", 'q9') 
         
         self.dfa.add_transition('q4', "work_experience", 'q5')
-        self.dfa.add_transition('q4', "missing_work_experience", 'q9') # NEEDS REVIEW
+        self.dfa.add_transition('q4', "missing_work_experience", 'q9')
         
         self.dfa.add_transition('q5', "projects_activities", 'q6')
-        self.dfa.add_transition('q5', "missing_projects_activities", 'q9') # NEEDS REVIEW
+        self.dfa.add_transition('q5', "missing_projects_activities", 'q9')
         
-        self.dfa.add_transition('q6', "skills", 'q7')  # HIGHLY QUALIFIED
-        self.dfa.add_transition('q6', "missing_skills", 'q9') # NEEDS REVIEW
+        self.dfa.add_transition('q6', "skills", 'q7')
+        self.dfa.add_transition('q6', "missing_skills", 'q9')
 
         self.dictionary = {
         'q7': 'HIGHLY QUALIFIED',
@@ -53,14 +53,12 @@ class ResumeClassifier:
 
     def transform_info_to_tokens(self, info):
          tokens = []
-         # Verificar que los campos existan y no sean valores por defecto
          tokens.append("name" if info.get("name") and info.get("name") != "John Doe" else "missing_name")
          tokens.append("email" if info.get("email") and info.get("email") != "example@email.com" else "missing_email")
          tokens.append("phone" if info.get("phone") and info.get("phone") != "+1-234-567-8901" else "missing_phone")
          tokens.append("education" if info.get("education") and info.get("education") != "Bachelor's Degree in Computer Science" else "missing_education")
          tokens.append("work_experience" if info.get("work_experience") and info.get("work_experience") != "Software Engineer with 2+ years of experience" else "missing_work_experience")
          
-         # Verificar si hay proyectos o actividades
          has_projects = info.get("projects") and info.get("projects") != "Various projects developing software applications"
          has_activities = info.get("activities") and info.get("activities") != "Participation in professional development activities"
          if has_projects or has_activities:
@@ -68,7 +66,6 @@ class ResumeClassifier:
          else:
              tokens.append("missing_projects_activities")
              
-         # Verificar si hay habilidades relevantes
          default_skills = f"Skills relevant to"
          tokens.append("skills" if info.get("skills") and default_skills not in info.get("skills") else "missing_skills")
          
