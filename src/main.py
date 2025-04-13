@@ -1,5 +1,4 @@
-import tkinter as tk
-from tkinter import filedialog
+import wx
 import os
 import sys
 import random
@@ -21,24 +20,19 @@ class Main:
         self.grammar_validator = ResumeGrammarValidator()
 
     def upload_resume(self):
-        root = tk.Tk()
-        root.withdraw()
-        self.file_path = filedialog.askopenfilename(
-            title="Select Resume File",
-            filetypes=[
-                ("Text Files", "*.txt"),
-                ("Word Documents", "*.docx"),
-                ("PDF Files", "*.pdf")
-            ]
-        )
-        if not self.file_path:
+        app = wx.App(None)
+        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+        dialog = wx.FileDialog(None, 'Select Resume File', wildcard='Text Files (*.txt)|*.txt|Word Documents (*.docx)|*.docx|PDF Files (*.pdf)|*.pdf', style=style)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.file_path = dialog.GetPath()
+            print(f"Selected resume: {self.file_path}")
+        else:
             print("No file selected.")
-            return None
-        root.quit()
+            self.file_path = None
+        dialog.Destroy()
         return self.file_path
 
     def generate_summary_text(self, resume_info):
-        """Genera el texto del resumen en el formato requerido por la gramática"""
         name = resume_info.get('name', '').strip() or "John Doe"
         if name == "None\n":
             name = "John Doe"
@@ -86,7 +80,6 @@ Summary:
 {summary}"""
 
     def save_summary(self, html_content, markdown_content, resume_name):
-        """Guarda los resúmenes generados en archivos"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         base_name = os.path.splitext(os.path.basename(resume_name))[0]
         
@@ -141,21 +134,21 @@ Summary:
                 
                 print("\nRecommendation:")
                 if ranking_result['ranking'] == "Highly Qualified":
-                    print("- Este candidato es altamente cualificado para el puesto. Se recomienda proceder a entrevista.")
+                    print("- This candidate is highly qualified for the position. Recommended to proceed with interview.")
                 elif ranking_result['ranking'] == "Qualified":
-                    print("- Este candidato está cualificado para el puesto. Se recomienda revisar puntos específicos durante la entrevista.")
+                    print("- This candidate is qualified for the position. Recommended to review specific points during the interview.")
                 elif ranking_result['ranking'] == "Potentially Qualified":
-                    print("- Este candidato podría ser adecuado. Se recomienda una revisión adicional.")
+                    print("- This candidate could be suitable. Recommended additional review.")
                 else:
-                    print("- Este candidato no parece cumplir con los requisitos mínimos para el puesto.")
+                    print("- This candidate does not seem to meet the minimum requirements for the position.")
                     
                 try:
                     summary_text = self.generate_summary_text(resume_info)
                     print("\nGenerating summary using grammar validator...")
                     model = self.grammar_validator.parse_and_validate(summary_text)
                     
-                    html_content = self.grammar_validator.generate_html(model)
-                    markdown_content = self.grammar_validator.generate_markdown(model)
+                    html_content = self.grammar_validator.generate_html(model, ranking_result)
+                    markdown_content = self.grammar_validator.generate_markdown(model, ranking_result)
                     
                     output_dir = "output/summaries"
                     os.makedirs(output_dir, exist_ok=True)
@@ -200,7 +193,7 @@ Summary:
                                 <h1>Resume Summary (Fallback)</h1>
                                 <p><strong>Name:</strong> {name}</p>
                                 <p><strong>Email:</strong> {email}</p>
-                                <p><strong>Score:</strong> {ranking_result['score']}</p>
+                                <p><strong>Score:</strong> {ranking_result['score']}</p>  
                                 <p><strong>Ranking:</strong> {ranking_result['ranking']}</p>
                             </div>
                         </body>
@@ -256,26 +249,6 @@ Summary:
                         print("Invalid input. Using a random resume.")
                         selected_archive = random.choice(archives)
                     
-                    valid_roles = list(regex_config.skills_regex.keys())
-                    print("\nAvailable roles:")
-                    for idx, role in enumerate(valid_roles, 1):
-                        print(f"{idx}. {role}")
-                    
-                    try:
-                        role_selection = input("\nEnter the number of the role (or 'r' for random): ").strip()
-                        
-                        if role_selection.lower() == 'r':
-                            self.role = random.choice(valid_roles)
-                        else:
-                            role_idx = int(role_selection) - 1
-                            if 0 <= role_idx < len(valid_roles):
-                                self.role = valid_roles[role_idx]
-                            else:
-                                print("Invalid selection. Using a random role.")
-                                self.role = random.choice(valid_roles)
-                    except (ValueError, IndexError):
-                        print("Invalid input. Using a random role.")
-                        self.role = random.choice(valid_roles)
                     
                     self.file_path = os.path.join(default_folder, selected_archive)
                     print(f"\nSelected resume: {selected_archive}")

@@ -76,8 +76,7 @@ class ResumeGrammarValidator:
         
         return model
         
-    def generate_html(self, model):
-        """Genera HTML a partir del modelo validado"""
+    def generate_html(self, model, ranking_info):
         html_template = """
 <!DOCTYPE html>
 <html lang="en">
@@ -124,6 +123,54 @@ class ResumeGrammarValidator:
             background-color: #f8f9fa;
             border-radius: 5px;
         }}
+        .ranking {{
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }}
+        .progress {{
+            height: 20px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
+        }}
+        .progress-bar {{
+            float: left;
+            width: 0;
+            height: 100%;
+            font-size: 12px;
+            line-height: 20px;
+            color: #fff;
+            text-align: center;
+            background-color: #337ab7;
+            box-shadow: inset 0 -1px 0 rgba(0,0,0,.15);
+            transition: width .6s ease;
+        }}
+        .sr-only {{
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
+        }}
+        .progress-bar-success {{
+            background-color: #5cb85c;
+        }}
+        .progress-bar-info {{
+            background-color: #5bc0de;
+        }}
+        .progress-bar-warning {{
+            background-color: #f0ad4e;
+        }}
+        .progress-bar-danger {{
+            background-color: #d9534f;
+        }}
     </style>
 </head>
 <body>
@@ -139,10 +186,39 @@ class ResumeGrammarValidator:
             <h2>Summary</h2>
             <p>{summary}</p>
         </div>
+        <div class="ranking">
+            <h2>Resume Ranking</h2>
+            <p><strong>Score:</strong> {score}</p>
+            <p><strong>Ranking:</strong> {ranking}</p>
+            <div class="progress">
+                <div class="progress-bar {progress_class}" role="progressbar" aria-valuenow="{score}" aria-valuemin="0" aria-valuemax="0.5" style="width: {score_percentage}%">
+                    <span class="sr-only">{score}</span>
+                </div>
+            </div>
+            <h3>Component Scores:</h3>
+            {component_scores}
+        </div>
     </div>
 </body>
 </html>
 """
+        
+        component_scores_html = ""
+        for component, details in ranking_info['details'].items():
+            component_scores_html += f"<p><strong>{component.capitalize()}:</strong> {details['score']} (weighted: {details['weighted_score']})</p>"
+        
+        progress_class = ""
+        if ranking_info['ranking'] == "Highly Qualified":
+            progress_class = "progress-bar-success"
+        elif ranking_info['ranking'] == "Qualified":
+            progress_class = "progress-bar-info"
+        elif ranking_info['ranking'] == "Potentially Qualified":
+            progress_class = "progress-bar-warning"
+        else:
+            progress_class = "progress-bar-danger"
+            
+        score_percentage = round(ranking_info['score'] / 0.5 * 100, 2)
+        
         return html_template.format(
             full_name=model.personal_info.full_name,
             email=model.personal_info.email,
@@ -150,11 +226,15 @@ class ResumeGrammarValidator:
             location=model.personal_info.location,
             linkedin=model.personal_info.linkedin,
             portfolio=model.personal_info.portfolio,
-            summary=model.summary.content
+            summary=model.summary.content,
+            score=ranking_info['score'],
+            ranking=ranking_info['ranking'],
+            progress_class=progress_class,
+            component_scores=component_scores_html,
+            score_percentage=score_percentage
         )
         
-    def generate_markdown(self, model):
-        """Genera Markdown a partir del modelo validado"""
+    def generate_markdown(self, model, ranking_info):
         markdown_template = """
 # Resume Summary
 
@@ -168,7 +248,19 @@ class ResumeGrammarValidator:
 
 ## Summary
 {summary}
+
+## Resume Ranking
+- **Score:** {score}
+- **Ranking:** {ranking}
+
+### Component Scores
+{component_scores}
 """
+        
+        component_scores_md = ""
+        for component, details in ranking_info['details'].items():
+            component_scores_md += f"- **{component.capitalize()}:** {details['score']} (weighted: {details['weighted_score']})\n"
+        
         return markdown_template.format(
             full_name=model.personal_info.full_name,
             email=model.personal_info.email,
@@ -176,21 +268,17 @@ class ResumeGrammarValidator:
             location=model.personal_info.location,
             linkedin=model.personal_info.linkedin,
             portfolio=model.personal_info.portfolio,
-            summary=model.summary.content
+            summary=model.summary.content,
+            score=ranking_info['score'],
+            ranking=ranking_info['ranking'],
+            component_scores=component_scores_md
         )
         
     def parse_and_validate(self, text):
-        """
-        Parsea y valida el texto del resumen utilizando una gramática independiente del contexto.
-        Implementa manejo robusto de errores con fallback garantizado.
-        """
         try:
-            # Preprocesar el texto para asegurar el formato correcto
-            # Esto ayuda a que el texto se ajuste mejor a la gramática
             lines = text.strip().split('\n')
             processed_text = ""
             
-            # Identificar las secciones principales
             personal_info_line = -1
             summary_line = -1
             
@@ -200,40 +288,32 @@ class ResumeGrammarValidator:
                 elif "Summary:" in line:
                     summary_line = i
             
-            # Si encontramos ambas secciones, reformatear el texto
             if personal_info_line >= 0 and summary_line >= 0:
-                # Reconstruir el texto con formato estricto
+                
                 processed_text = "Personal Information:\n"
                 
-                # Extraer información personal (6 líneas después del encabezado)
                 info_lines = []
                 for i in range(personal_info_line + 1, min(personal_info_line + 7, summary_line)):
                     if i < len(lines) and lines[i].strip():
                         info_lines.append(lines[i].strip())
                 
-                # Asegurar que tenemos 6 líneas de información personal
                 while len(info_lines) < 6:
                     info_lines.append("Unknown")
                 
-                # Añadir las líneas de información personal al texto procesado
                 processed_text += "\n".join(info_lines) + "\n\n"
                 
-                # Añadir la sección de resumen
                 processed_text += "Summary:\n"
                 
-                # Extraer el resumen (texto después de "Summary:")
                 summary_text = ""
                 for i in range(summary_line + 1, len(lines)):
                     if lines[i].strip():
                         summary_text += lines[i].strip() + " "
                 
-                # Asegurar que el resumen tenga al menos 50 caracteres
                 if len(summary_text) < 50:
                     summary_text = "Professional with extensive experience in relevant fields. Skilled in multiple technologies and methodologies applicable to the position."
                 
                 processed_text += summary_text
             else:
-                # Si no encontramos las secciones, usar un formato por defecto
                 processed_text = """Personal Information:
 John Doe
 example@email.com
@@ -246,15 +326,12 @@ Summary:
 Professional with extensive experience in relevant fields. Skilled in multiple technologies and methodologies applicable to various positions. Demonstrates strong problem-solving abilities and effective communication skills.
 """
             
-            # Intentar parsear con la gramática definida
             model = self.meta_model.model_from_str(processed_text)
             model = self.validate(model)
             return model
         except Exception as e:
-            # Si hay un error, crear un modelo "fallback" con valores predeterminados
             print(f"Error parsing resume grammar: {str(e)}")
             
-            # Crear un texto de resumen simplificado que cumpla con la gramática
             fallback_text = """Personal Information:
 John Doe
 example@email.com
@@ -267,9 +344,7 @@ Summary:
 Professional with extensive experience in relevant fields. Skilled in multiple technologies and methodologies applicable to various positions. Demonstrates strong problem-solving abilities and effective communication skills.
 """
             try:
-                # Intentar parsear el texto de fallback
                 model = self.meta_model.model_from_str(fallback_text)
                 return model
             except Exception as fallback_error:
-                # Si incluso el fallback falla, elevar la excepción original
                 raise TextXSemanticError(f"Error parsing or validating resume summary: {str(e)}") 
