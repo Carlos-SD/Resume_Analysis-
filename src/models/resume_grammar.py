@@ -36,7 +36,7 @@ class ResumeGrammarValidator:
             
     def validate_phone(self, phone):
         """Valida el formato del teléfono"""
-        pattern = r'^\+?[\d\s-()]{10,}$'
+        pattern = r'^\+?[\d\s()\-]{10,}$'
         if not re.match(pattern, phone):
             return False
         return True
